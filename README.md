@@ -4,6 +4,10 @@ This repository is the **public bug tracker** for the Finance Tracker mobile app
 
 If you are a QA tester, this is the right place. Welcome, and thank you for testing.
 
+## 📖 Read this first
+
+**[How the app should behave](docs/app-behavior.md)** — the canonical reference for what the app is supposed to do, what the validation rules are, what the error messages should say, and what's deliberately *not* a feature yet. **Read this before planning test cases or filing your first bug.** If the build does something the doc doesn't describe, that itself is worth reporting.
+
 ## How to report a bug
 
 1. Go to the [**Issues**](https://github.com/ericocampos/finance-tracker-bugs/issues) tab.
