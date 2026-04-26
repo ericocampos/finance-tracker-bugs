@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or general feedback
+    url: https://github.com/ericocampos/finance-tracker-bugs/discussions
+    about: For questions, suggestions, or non-bug feedback, please open a Discussion instead.

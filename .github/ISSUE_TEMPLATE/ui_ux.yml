@@ -1,0 +1,87 @@
+name: UI / UX issue
+description: Visual glitch, awkward flow, confusing copy, accessibility problem.
+title: "[UI] "
+labels: ["ui-ux", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **This repository is public.** Do not include real financial data, personal information, or tokens. Use only demo/test data.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy checklist
+      options:
+        - label: My report contains no real financial data, names, emails, or credentials.
+          required: true
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of issue is this?
+      options:
+        - Visual glitch (overlap, cropping, wrong color)
+        - Confusing copy / translation issue
+        - Awkward flow or interaction
+        - Accessibility (contrast, screen reader, font size)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where in the app?
+      description: Screen and any specific element (e.g. "Settings → Currency picker, the selected row").
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag and drop here. Mark up the issue if helpful.
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: App version / build number
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+    validations:
+      required: true
+  - type: input
+    id: locale
+    attributes:
+      label: Language / locale
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement (optional)

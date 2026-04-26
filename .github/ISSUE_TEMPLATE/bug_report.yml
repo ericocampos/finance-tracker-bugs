@@ -1,0 +1,128 @@
+name: Bug report
+description: Something is broken or behaves incorrectly.
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report.
+
+        ⚠️ **This repository is public.** Do not include real financial data, personal information, tokens, or screenshots of real banking apps. Use only demo/test data.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy checklist
+      options:
+        - label: My report contains no real financial data, names, emails, or credentials.
+          required: true
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the bug.
+      placeholder: e.g. Saving a new transaction on Android returns to the list but the transaction is not added.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps. Start from app launch.
+      placeholder: |
+        1. Open the app.
+        2. Tap "+" on the transactions screen.
+        3. Fill in amount 10, category Food, account Wallet.
+        4. Tap Save.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The transaction should appear in the list and the balance should update.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: The screen closes but no transaction is added; the balance does not change.
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: App version / build number
+      placeholder: e.g. 1.0.3 (build 14)
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version
+      placeholder: e.g. Android 14 / iOS 17.4
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: e.g. Pixel 7, iPhone 13, Galaxy A54
+    validations:
+      required: true
+  - type: input
+    id: locale
+    attributes:
+      label: Language / locale in the app
+      placeholder: e.g. pt-BR, en-US
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Blocker (cannot use the app)
+        - High (major feature broken)
+        - Medium (feature partially broken or workaround exists)
+        - Low (cosmetic / minor)
+    validations:
+      required: true
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: How often does it happen?
+      options:
+        - Always (100%)
+        - Often (>50%)
+        - Sometimes (<50%)
+        - Once
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / screen recording
+      description: Drag and drop here. Make sure no real data is visible.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (if available)
+      description: Paste relevant log lines. Redact any tokens or personal data.
+      render: shell
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
