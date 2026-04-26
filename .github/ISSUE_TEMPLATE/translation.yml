@@ -1,0 +1,91 @@
+name: Translation / i18n issue
+description: Wrong, missing, awkward, or untranslated text — or broken layout in a non-default language.
+title: "[i18n] "
+labels: ["i18n", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **This repository is public.** Do not include real financial data or personal information in screenshots.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy checklist
+      options:
+        - label: My report contains no real financial data, names, emails, or credentials.
+          required: true
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of i18n issue is this?
+      options:
+        - Missing translation (text shown in the wrong language / fallback)
+        - Wrong or inaccurate translation
+        - Awkward / unnatural wording
+        - Layout broken because translated text is too long / wraps badly
+        - Plural / number / currency / date format wrong for the locale
+        - Right-to-left or special-character rendering issue
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language / locale affected
+      description: Use the locale code if you know it (e.g. pt-BR, en-US, es-ES). Otherwise the language name is fine.
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where in the app?
+      description: Screen and the specific element. Be precise — the more exact, the easier to fix.
+      placeholder: e.g. Settings → Language picker, the description text under "Português (Brasil)".
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text (what the app shows)
+      description: Copy/paste the exact string, or describe it if you can't copy.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested text (what it should say)
+      description: Your proposed correction. Native speakers preferred — note if you are one.
+      render: text
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why the current text is wrong
+      placeholder: e.g. "Saldo" is the correct word in Portuguese, "Equilíbrio" is a literal mistranslation of "balance".
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Especially helpful for layout / wrapping issues.
+  - type: input
+    id: app_version
+    attributes:
+      label: App version / build number
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device model (only if layout-related)

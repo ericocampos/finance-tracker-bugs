@@ -6,7 +6,7 @@ If you are a QA tester, this is the right place. Welcome, and thank you for test
 
 ## How to report a bug
 
-1. Go to the [**Issues**](../../issues) tab.
+1. Go to the [**Issues**](https://github.com/ericocampos/finance-tracker-bugs/issues) tab.
 2. Click **New issue**.
 3. Pick the template that matches what you found:
    - **Bug report** — something is broken or behaves wrong.
@@ -51,4 +51,6 @@ When reporting, please always note:
 
 ## Questions
 
-For general questions or discussion (not bugs), use the [**Discussions**](../../discussions) tab.
+For general questions or discussion (not bugs), use the [**Discussions**](https://github.com/ericocampos/finance-tracker-bugs/discussions) tab.
+
+For first-time testers, please read the pinned **[Welcome QA testers](https://github.com/ericocampos/finance-tracker-bugs/discussions/1)** post before filing anything.
