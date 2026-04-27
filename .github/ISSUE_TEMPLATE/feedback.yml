@@ -14,6 +14,14 @@ body:
       options:
         - label: My report contains no real financial data, names, emails, or credentials.
           required: true
+  - type: input
+    id: build_link
+    attributes:
+      label: Build link
+      description: 'Paste the full Expo build URL of the APK your feedback is based on. Find the current one in the README → "Current test build".'
+      placeholder: https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/cf170fbf-15a0-4105-955d-c7adce4cabf7
+    validations:
+      required: true
   - type: textarea
     id: feedback
     attributes:

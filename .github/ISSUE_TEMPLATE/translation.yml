@@ -16,6 +16,14 @@ body:
           required: true
         - label: I searched existing issues and this is not a duplicate.
           required: true
+  - type: input
+    id: build_link
+    attributes:
+      label: Build link
+      description: 'Paste the full Expo build URL of the APK you tested. Find the current one in the README → "Current test build". Reports without a valid build link cannot be triaged.'
+      placeholder: https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/cf170fbf-15a0-4105-955d-c7adce4cabf7
+    validations:
+      required: true
   - type: dropdown
     id: kind
     attributes:

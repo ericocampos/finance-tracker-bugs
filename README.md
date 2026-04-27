@@ -4,6 +4,23 @@ This repository is the **public bug tracker** for the Finance Tracker mobile app
 
 If you are a QA tester, this is the right place. Welcome, and thank you for testing.
 
+## 📦 Current test build
+
+> **Test only the build linked here.** Reports from older builds, side-loaded variants, or unofficial copies cannot be triaged.
+
+| Field | Value |
+|---|---|
+| **Platform** | Android (APK) |
+| **App version** | `0.13.0` |
+| **Build link** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/cf170fbf-15a0-4105-955d-c7adce4cabf7 |
+| **Build ID** | `cf170fbf-15a0-4105-955d-c7adce4cabf7` |
+
+**To install**: open the Build link above on your Android device, then tap "Install" on the Expo build page. You may need to allow "Install from unknown sources" the first time.
+
+**When you file an Issue, paste the Build link above into the *Build link* field** so we know exactly which build you tested. Issues without a build link cannot be triaged and will be closed as `needs-info`.
+
+This section is updated when a new build ships. **Always re-check it before testing**, and update to the latest build before filing reports.
+
 ## 📖 Read this first
 
 **[How the app should behave](docs/app-behavior.md)** — the canonical reference for what the app is supposed to do, what the validation rules are, what the error messages should say, and what's deliberately *not* a feature yet. **Read this before planning test cases or filing your first bug.** If the build does something the doc doesn't describe, that itself is worth reporting.
