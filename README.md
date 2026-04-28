@@ -11,9 +11,9 @@ If you are a QA tester, this is the right place. Welcome, and thank you for test
 | Field | Value |
 |---|---|
 | **Platform** | Android (APK) |
-| **App version** | `0.17.0` |
-| **Build link** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/3a28620c-afd2-42be-bdcc-f5a65f381288 |
-| **Build ID** | `3a28620c-afd2-42be-bdcc-f5a65f381288` |
+| **App version** | `0.18.0` |
+| **Build link** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/5d0e09b4-017a-4abc-b444-c0282f9a2e81 |
+| **Build ID** | `5d0e09b4-017a-4abc-b444-c0282f9a2e81` |
 
 **To install**: open the Build link above on your Android device, then tap "Install" on the Expo build page. You may need to allow "Install from unknown sources" the first time.
 
