@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-04-27 (app v0.18.0).
+> **Last updated:** 2026-04-28 (app v0.18.0).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -239,11 +239,50 @@ Edge cases worth probing:
 - **Restoring a file that isn't a real database.** The OS file picker filters by file type; if a tester somehow selects a non-database file (a renamed `.db`, etc.), the app should fail gracefully on next boot rather than corrupting silently.
 - **Killing the app between confirming the restore and seeing the force-quit message.** On next launch the user should see the restored data with no error.
 
+### 4.11 Theme — light, dark, follow the system
+
+**Settings → Tema / Theme**. Three chip options:
+
+- **Sistema / System** *(default)* — follows the device's color scheme **live**. If the user flips the OS theme while the app is open, every screen re-renders without needing a relaunch.
+- **Claro / Light** — pins the app to light mode regardless of the OS setting.
+- **Escuro / Dark** — pins the app to dark mode regardless of the OS setting.
+
+The choice is persisted across app launches.
+
+> **Tester note.** Every screen — Home, Ledger, Insights, Settings, the new-transaction and edit modals, the lock screen, and the post-restore "force-quit" screen — must have a dark-mode treatment. **No screen should ever show bright-white text on bright-white background, illegible contrast, or "white flash" on transition.** Active accent buttons and chips invert in dark mode (dark bg in light mode → light bg in dark mode) so they stay visually prominent. The status bar tint should match the active theme automatically.
+
+### 4.12 Biometric lock
+
+Optional security gate. **Settings → Segurança / Security → "Trancar com biometria" toggle**. Default off.
+
+- **Availability check.** If the device has no enrolled biometrics (Face ID, fingerprint) AND no device PIN, the toggle is **disabled** with a caption: *"Configure biometria nas definições do dispositivo."* Tapping the disabled toggle does nothing.
+- **Cold start (toggle on).** When the user opens the app, a full-screen **"App bloqueada"** lock screen appears *before* the tabs render. The OS biometric prompt fires automatically. On success, the app appears.
+- **Background return (toggle on).** Returning to the app from the background **after more than 60 seconds** re-locks it. Returning sooner does **not** re-lock. iOS "inactive" state (e.g. when a system Alert is showing on top of the app) does **not** trigger the lock — only true backgrounding.
+- **Auth failure.** The lock screen stays put; the user can tap **"Desbloquear"** to retry. The OS prompt offers a passcode fallback if biometrics keep failing.
+- **Disabling the toggle.** Switching it off → the next backgrounding cycle no longer locks. An already-locked session must complete its current authentication first (so the user can't accidentally lock themselves out by toggling off mid-prompt).
+
+### 4.13 Geo-tagging — capturing where a transaction happened
+
+Transactions can optionally carry a captured location (latitude, longitude, accuracy in metres). Geo capture is **purely opt-in per transaction** — the default is no location.
+
+- **Capture button.** Inside the new-transaction modal *and* the edit modal, below the Observations field, a **"📍 Capturar localização"** button.
+- **First tap → OS permission prompt.** Subsequent taps capture silently.
+- **Captured state.** The button area turns into a card showing **"Localização guardada (≈Xm)"** with **"Recapturar"** and **"Limpar"** links.
+- **Permission denied.** Button stays visible with caption *"Permissão negada nas definições do dispositivo."* The user can re-enable in OS Settings and try again.
+- **Location services off OS-wide.** Caption *"Serviços de localização desativados."*
+- **Transfers.** Capturing on a transfer writes the same coordinates to **both** legs. Recapturing or clearing on the edit modal cascades to the paired leg, same as the amount/date/description cascade.
+- **Display in the Ledger.** Rows that have a captured location render a small **map-pin icon** next to the description.
+- **Storage / privacy.** Coordinates **stay on the device**. They are included in the SQLite backup file the user exports manually; they are never sent to any server.
+
+> **Tester note.** Coordinates leaving the device — under any circumstance — would be a critical bug. If you see network activity correlated with capturing a location, file it as a Crash/security issue immediately and stop testing.
+
 ---
 
 ## 5. Screens
 
-The app has **three bottom tabs**: **Início / Home**, **Lançamentos / Ledger**, **Configurações / Settings**.
+The app has **four bottom tabs**: **Início / Home**, **Lançamentos / Ledger**, **Insights / Insights**, **Configurações / Settings**.
+
+> **Tab bar accessibility.** The active tab is distinguished from inactive tabs by **geometry** (e.g. filled inner dot, taller bar in Insights), not just color. This is intentional — the active tab must remain identifiable in grayscale screenshots and for color-blind users. **A bug worth filing**: an active tab that's only distinguishable by color tint, not by shape.
 
 ### 5.1 Home — month at a glance
 
@@ -262,12 +301,59 @@ The app has **three bottom tabs**: **Início / Home**, **Lançamentos / Ledger**
   - A sub-line: **"account • category"**.
   - The **signed amount** (positive in green for income / transfer-in, negative in red for expense / transfer-out).
 - Opening-balance rows render the **"saldo inicial"** chip next to the description.
+- Rows that have a captured location render a small **map-pin icon** next to the description (see §4.13).
 - Tap any row → edit modal.
+- **Map icon in the header** → opens the modal Map view for the displayed month (see §5.5).
 
-### 5.3 Settings — preferences and data
+**Empty states (two distinct cases — please don't confuse them when filing bugs):**
+
+- **The displayed month has zero transactions at all** (before any chip filter is applied) → the list renders a **branded empty state**: circle/ring artwork, the title *"Nada por aqui ainda"*, a privacy-leaning subtitle, and a primary CTA *"Novo lançamento"* that opens the new-transaction modal.
+- **The month has transactions but the active filter chips exclude all of them** → a compact text fallback *"Sem transações neste mês."* (no artwork, no CTA).
+
+### 5.3 Insights — analytics over the last 6 months
+
+The fourth bottom tab. Shows patterns in the data the user has entered. The window is the **rolling last 6 months ending at the current calendar month** — there is **no time-range scrolling** in this version. All values aggregate across **all non-archived accounts**; there is **no per-account filter**.
+
+The screen has four sections, top to bottom, each in its own card:
+
+- **Mensal / Monthly** — grouped bar chart, one bar pair per month: green income, red expense. A small label above each pair shows that month's net. Opening-balance income rows are **excluded**; transfer legs are **excluded**.
+- **Saldo acumulado / Cumulative balance** — line chart, one point per end-of-month for the 6 months. Each point is the **aggregate balance of all accounts** at that cutoff, computed using the same anchor semantics that drive Home's per-account balances (most recent opening-balance row on or before the cutoff anchors that account's running total; signed transactions then accumulate).
+- **Despesas por categoria / Expenses by category** AND **Receitas por categoria / Income by category** — two donut charts (current month only) plus a legend. Each legend row shows: color swatch · category name · percent · amount, sorted **descending by amount**. Categories with zero in the current month don't appear. If a kind has no rows that month, a small grey caption (*"Sem despesas este mês." / "No expenses this month."*) replaces the chart for that section. Transfer legs and opening-balance rows are **excluded**.
+- **Maiores variações / Biggest movers** — list (no chart). Two sub-sections:
+  - **Top 3 expense categories** ranked by **absolute change vs. last month** (sign shown via ↑/↓ chip).
+  - **Top 3 income categories** by **current-month total** (no chip).
+  - Ties broken by the larger of (current, previous) totals. Categories that exist in the prior month but not in the current still appear if their delta puts them in the top 3. Opening-balance rows are excluded.
+
+**Empty / sparse data behaviour:**
+
+- **Zero transactions in the 6-month window** → the entire screen shows a single empty state with a CTA jumping to the new-transaction modal.
+- **Only the current month has data** → trend bars and cumulative line show one populated point; a small grey caption below the page reads *"Adicione mais meses para ver tendências."*
+- **One kind missing in the breakdown** → that kind's card shows the placeholder caption; the other kind renders normally.
+- **Fewer than 3 movers in either sub-section** → render whatever exists; if zero, the entire "Biggest movers" card is hidden.
+
+**Refresh behaviour**: the screen **refetches on every focus**. So adding a transaction in another tab and returning to Insights should immediately reflect the new data — no manual refresh control exists.
+
+> **Tester note.** Insights is heavily dependent on the same computation rules as Home (§6). If a number on Insights disagrees with what you can recompute from the Ledger, that's a high-value bug — please file with the exact values you saw and the source rows.
+
+### 5.4 Map — geo-tagged transactions for the displayed month
+
+A **modal map screen** opened from the **map icon in the Ledger header**. Shows every transaction in the **same month the Ledger is currently displaying** that has a captured location.
+
+- **Markers**: one pin per transaction. Pin colour by transaction type — **green** for income, **red** for expense, **grey** for transfers. Multiple transactions at the same coordinate are allowed and stack visually.
+- **Camera on open**: fits the bounding box of all pins with edge padding. If the month has no geo-tagged rows, falls back to a wide-zoom default view and shows the empty-state overlay.
+- **Tapping a marker**: opens a callout — description (or category fallback) on top, **signed amount** in the middle, **occurrence date** below. Tapping the callout itself opens the transaction's edit modal.
+- **Empty state**: a semi-transparent caption *"Sem transações com localização neste mês."* over the map.
+- **Header**: a close button (top-right) and a title showing the month name. Status bar inset is respected.
+- **Privacy**: the map renders entirely from local data. **No coordinate data leaves the device.**
+
+> **Tester note.** This screen requires a properly built APK (Google Maps API key baked in at build time). **Expo Go cannot render this screen.** Always test the Map screen using the APK pinned in the README's "Current test build" — not Expo Go. If you see "map area is grey/blank" on the pinned APK build, that's a bug worth filing; on Expo Go it is expected.
+
+### 5.5 Settings — preferences and data
 
 - **Top**: Language picker (chips), Currency picker (chips).
+- **Theme picker** (chips: System / Light / Dark) — see §4.11.
 - **Sub-routes**: Contas / Accounts, Categorias / Categories.
+- **Segurança / Security card**: Biometric lock toggle — see §4.12.
 - **Backup card**: Export, Restore.
 
 ---
@@ -320,6 +406,13 @@ These are states the app is supposed to prevent. **If you can produce any of the
 - **Deleting one leg of a transfer leaves the other leg orphaned.** Both legs should disappear together.
 - **Submitting the form before accounts have loaded.** The Account picker should be empty / disabled until data is ready.
 - **Confirming a restore by tapping outside the alert** rather than the explicit "Restore" button.
+- **A captured location persisting on a transfer leg without the paired leg also having it.** Capturing, recapturing, or clearing a location on one leg of a transfer must cascade to the other leg.
+- **Coordinates leaving the device.** If you observe network activity correlated with capturing or saving a location, file it as a critical security bug immediately.
+- **The Map screen showing pins from a different month** than what the Ledger is currently displaying. The two should always be in sync.
+- **The biometric lock failing to re-engage after the user backgrounds the app for more than 60 seconds** (with the toggle on). Or, conversely, locking under 60 seconds.
+- **The biometric lock toggle being enabled on a device with no enrolled biometrics or PIN.** It should be greyed out.
+- **A theme that doesn't apply to a screen** — e.g. dark mode active everywhere except one modal that stays light. List the specific screen + action that produced it.
+- **Insights numbers disagreeing with Ledger.** If the Insights monthly bar for a given month shows a different income/expense total than what you can verify by summing the Ledger rows for that month (excluding opening-balance rows and transfers), that's a high-value bug. Include both numbers and the source rows.
 
 ---
 
@@ -328,16 +421,17 @@ These are states the app is supposed to prevent. **If you can produce any of the
 The following are **deliberate non-features** in the current build. Filing these as bugs adds noise. If you have feedback about whether they *should* exist, open a **Discussion** instead.
 
 - **Investments** (holdings, snapshot prices, performance) — planned but not in mobile yet.
-- **Reports / charts / insights** — planned but not in mobile yet.
-- **Geo-tagging on transactions / a map of where money was spent** — planned but not in mobile yet.
-- **Biometric lock, fancy splash, app-icon polish** — planned but not in mobile yet.
-- **AI / LLM analysis or narratives in the app** — explicitly out of scope by design (the app must not send financial data anywhere).
+- **Per-account filter on Insights** — Insights aggregates across **all non-archived accounts**; there's no way to scope a chart to a single account in this version.
+- **Time-range scrolling on Insights** — the window is locked to the rolling last 6 months ending at the current calendar month.
+- **AI / LLM analysis or narratives inside the app** — explicitly out of scope by design (the app must not send financial data anywhere).
 - **Sync between two devices, multi-user accounts, household sharing.**
 - **Automatic / scheduled / periodic backups, backup rotation, backup encryption.** Backup is a manual user action by design.
 - **CSV or JSON import/export.**
 - **Recurring transactions, scheduled future transactions, transaction templates.** The app accepts any date the user types but does not project anything forward.
 - **Currency conversion.** The user picks one currency; amounts are not converted.
 - **Hard-deleting an account or a category.** Only Archive is exposed.
+- **App store store-listing metadata, version naming policy, store submission UX.** These are release-pipeline concerns, not in-app behaviour — please don't file them as app bugs.
+- **Map screen on Expo Go.** The Map screen requires a built APK with a Google Maps API key — Expo Go renders it grey/blank and that's expected (see §5.4).
 
 ---
 
