@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-04-28 (app v0.18.0).
+> **Last updated:** 2026-04-29 (app v0.19.0).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -30,7 +30,7 @@ Key facts:
 
 - **One user per device.** No multi-user, no households, no shared ledgers.
 - **All data lives on the device.** The app does not send any financial data to any server. Backups go wherever the user picks in the OS share sheet (iCloud Drive, Google Drive, email, etc.); the app itself doesn't know where they end up.
-- **Three languages**: English (`en`), European Portuguese (`pt-PT`), Brazilian Portuguese (`pt-BR`). The user chooses one in Settings. **First launch defaults to `pt-BR`.**
+- **Three languages**: English (`en`), European Portuguese (`pt-PT`), Brazilian Portuguese (`pt-BR`). The user chooses one **explicitly on the very first launch** via a blocking language picker (see §4.1) and can change it any time in Settings.
 - **Three currencies for display**: EUR, USD, BRL. Currency only affects how amounts are formatted on screen — there's no currency conversion. The user picks one currency and lives in it.
 
 ---
@@ -147,11 +147,73 @@ Editing an existing opening-balance row is fine — moving its date within the s
 
 ### 4.1 First launch (fresh install or after restore on a new device)
 
+The first launch shows up to **two onboarding screens** before the Home screen. Existing users who upgrade from a previous version (already have data) see neither — they go straight to Home.
+
+#### Step 1 — Language picker (always shown on fresh install)
+
+A full-screen, **blocking** screen with a stacked trilingual title:
+
+> Choose your language
+> Escolha o seu idioma
+> Escolha seu idioma
+
+Three rows, each showing a language name in its own language (the **endonym**):
+
+- **English**
+- **Português (Portugal)**
+- **Português (Brasil)**
+
+A **Continue / Continuar** button at the bottom. The button label is shown in the *highlighted* row's language.
+
+**Pre-highlight rules** (the app reads the device's preferred language once at launch):
+
+- Device language is **Português (Brasil)** → "Português (Brasil)" row pre-highlighted, Continue reads **Continuar**, button enabled.
+- Device language is **Português (Portugal)** → "Português (Portugal)" row pre-highlighted, Continue reads **Continuar**, button enabled.
+- Device language is **English (any region)** → "English" row pre-highlighted, Continue reads **Continue**, button enabled.
+- Device language is anything else (e.g. Spanish, French) → **no row pre-highlighted**, Continue button is **disabled** until the user taps a row.
+
+The user **must tap one of the rows and then tap Continue**. There is no Skip and no Back.
+
+> **Tester note (language picker).**
+> - Verify that on a freshly installed app, the picker really appears, with no other UI shown first.
+> - Verify the pre-highlight matches the device language.
+> - Verify the Continue button is disabled until any row is tapped (only relevant when no row was pre-highlighted, i.e. an unsupported device locale).
+> - Verify that tapping Continue takes you to the next step (or to Home if biometric onboarding is skipped per the rules below).
+> - Verify that **closing and re-opening the app** does **not** show the picker again — the choice is remembered.
+
+#### Step 2 — Biometric / passcode lock onboarding (sometimes shown)
+
+This screen appears immediately after the user taps Continue on the language picker, **only** if the device has biometric (Face ID / fingerprint) **or** a device PIN/passcode set up. If the device has neither, this screen is silently skipped.
+
+A full-screen prompt with:
+
+- **Title** (in the chosen language): "Protect your data" / "Proteja os seus dados" / "Proteja seus dados".
+- A short body explaining that the app holds financial data and that the device's existing biometric or PIN can be used to lock it, and that this can be changed later in Settings.
+- A primary button: **Enable / Ativar**.
+- A secondary text-style button: **Skip for now / Agora não**.
+
+**Tap "Enable":**
+- The OS biometric/passcode prompt appears with the message **"Confirm to enable app lock"** (localized).
+- On **success**, the app proceeds to Home with the lock turned on.
+- On **cancel** or **fail**, the onboarding screen **stays visible** so the user can try Enable again or tap Skip.
+
+**Tap "Skip for now":** the lock stays off and the app proceeds to Home. The user can enable it later in **Settings → Segurança / Security**.
+
+> **Tester note (biometric onboarding).**
+> - On a device with biometric or passcode enrolled: verify the screen appears immediately after Continue on the language picker.
+> - On a device with **no** biometric and no PIN at all: verify the screen does **not** appear; the app jumps from the language picker straight to Home.
+> - Verify "Enable → cancel OS prompt" leaves you on the onboarding screen (not on Home) and the OS prompt can be triggered again.
+> - Verify "Enable → succeed" → force-quit → relaunch shows the **App bloqueada** lock screen (cold-start lock works).
+> - Verify "Skip" → relaunch does **not** show the lock screen.
+> - Verify that on subsequent launches (after either Enable or Skip), this screen never reappears unless app data is wiped.
+
+#### Step 3 — Home screen and default categories
+
 1. The app opens to the Home screen with **zero accounts**.
 2. The user is expected to go to **Settings → Contas / Accounts → +** to create at least one account before adding any transactions.
-3. The 19 default categories are pre-seeded in the active language; the user can use them immediately, edit them, or archive them.
+3. The 19 default categories are pre-seeded in the language picked above; the user can use them immediately, edit them, or archive them.
 
-> **Tester note.** Verify the seeded category names match the language that was active at first launch. Verify that *changing the language afterward* does **not** rename existing categories.
+> **Tester note (categories).** Verify the seeded category names match the language picked on Step 1. Verify that *changing the language afterward* does **not** rename existing categories.
 
 ### 4.2 Adding a transaction
 
@@ -255,11 +317,19 @@ The choice is persisted across app launches.
 
 Optional security gate. **Settings → Segurança / Security → "Trancar com biometria" toggle**. Default off.
 
+- **First-launch onboarding.** On a fresh install with biometric/passcode enrolled, the user is asked to enable this feature during onboarding (see §4.1, Step 2). Skipping there leaves the toggle off and the user can flip it on later from Settings using the rules below.
 - **Availability check.** If the device has no enrolled biometrics (Face ID, fingerprint) AND no device PIN, the toggle is **disabled** with a caption: *"Configure biometria nas definições do dispositivo."* Tapping the disabled toggle does nothing.
+- **Toggling the switch (NEW in v0.19.0).** Tapping the toggle — **in either direction (off → on AND on → off)** — immediately fires the OS biometric/passcode prompt with the message **"Confirm to change app lock"** (localized). The toggle's visible position and the lock state are only updated after a successful authentication.
+  - **OS prompt cancelled or failed:** the toggle visibly stays where it was. Nothing else changes. The user can tap it again to retry.
+  - **OS prompt succeeded:** the toggle flips, and the lock state changes accordingly.
 - **Cold start (toggle on).** When the user opens the app, a full-screen **"App bloqueada"** lock screen appears *before* the tabs render. The OS biometric prompt fires automatically. On success, the app appears.
 - **Background return (toggle on).** Returning to the app from the background **after more than 60 seconds** re-locks it. Returning sooner does **not** re-lock. iOS "inactive" state (e.g. when a system Alert is showing on top of the app) does **not** trigger the lock — only true backgrounding.
-- **Auth failure.** The lock screen stays put; the user can tap **"Desbloquear"** to retry. The OS prompt offers a passcode fallback if biometrics keep failing.
-- **Disabling the toggle.** Switching it off → the next backgrounding cycle no longer locks. An already-locked session must complete its current authentication first (so the user can't accidentally lock themselves out by toggling off mid-prompt).
+- **Auth failure on the lock screen.** The lock screen stays put; the user can tap **"Desbloquear"** to retry. The OS prompt offers a passcode fallback if biometrics keep failing.
+
+> **Tester note (toggle re-auth, NEW in v0.19.0).**
+> - Verify that with the toggle currently OFF, tapping it triggers the OS prompt. Cancel → toggle stays OFF. Succeed → toggle goes ON.
+> - Verify that with the toggle currently ON, tapping it triggers the OS prompt. Cancel → toggle stays ON. Succeed → toggle goes OFF.
+> - Verify that on a device with no biometric/PIN enrolled, the toggle is greyed out and tapping it does nothing.
 
 ### 4.13 Geo-tagging — capturing where a transaction happened
 

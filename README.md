@@ -11,11 +11,12 @@ If you are a QA tester, this is the right place. Welcome, and thank you for test
 | Field | Value |
 |---|---|
 | **Platform** | Android (APK) |
-| **App version** | `0.18.0` |
-| **Build link** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/a9060a67-a8d8-447e-a076-fa13b4c58b44 |
-| **Build ID** | `a9060a67-a8d8-447e-a076-fa13b4c58b44` |
-| **Direct APK download** | https://expo.dev/artifacts/eas/mSyzHwa8bJk6VugnBxHYum.apk |
-| **OTA channel** | `preview` (receives over-the-air updates pushed via `mobile-v*-preview*` tags) |
+| **App version** | `0.19.0` |
+| **Build link** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/d2739b3f-b7a2-465f-ac0e-b802cc85a749 |
+| **Build ID** | `d2739b3f-b7a2-465f-ac0e-b802cc85a749` |
+| **Direct APK download** | https://expo.dev/artifacts/eas/rZgP9CfSKNCUwREvwJvUw6.apk |
+| **OTA channel** | `preview` (matching runtime `0.19.0`; OTA updates pushed via `mobile-v0.19.0-preview*` tags will reach this build, older `mobile-v0.18.0-preview*` updates will not) |
+| **What's new in this build** | First-launch language picker (replaces silent pt-BR default) + first-launch biometric/PIN onboarding (only on devices with biometric or device PIN enrolled) + Settings biometric toggle now requires device re-auth in both directions. See `docs/app-behavior.md` §4.1 and §4.12 for the full behavior; the **Tester note** boxes in those sections list what to verify. |
 
 **To install**: open the Build link above on your Android device, then tap "Install" on the Expo build page. You may need to allow "Install from unknown sources" the first time.
 
