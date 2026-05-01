@@ -108,7 +108,10 @@ When validation fails, the form stays open with the user's input intact and show
 | Rule | Error string (pt-BR / pt-PT) | Error string (EN) |
 |---|---|---|
 | Amount must be a positive number greater than zero | "Valor obrigatório" | "Amount must be positive" |
+| Amount must not exceed €99,999,999.99 | "Valor demasiado alto. Verifique o número introduzido." (pt-PT) / "Valor muito alto. Verifique o número digitado." (pt-BR) | "Amount is too large. Please double-check the value." |
 | Date must be a valid calendar date | "Data inválida" | "Invalid date" |
+
+> **Tester note.** The amount field caps the digit count at 10 as you type, so you should not be able to enter values above €99,999,999.99. If the field accepts an 11th digit, that is itself a bug. The submit-time error is a defensive second layer; reaching it requires bypassing the digit cap somehow.
 
 ### 3.2 Income / Expense
 
@@ -400,10 +403,13 @@ The screen has four sections, top to bottom, each in its own card:
 - **Only the current month has data** → trend bars and cumulative line show one populated point; a small grey caption below the page reads *"Adicione mais meses para ver tendências."*
 - **One kind missing in the breakdown** → that kind's card shows the placeholder caption; the other kind renders normally.
 - **Fewer than 3 movers in either sub-section** → render whatever exists; if zero, the entire "Biggest movers" card is hidden.
+- **Out-of-scale data behaviour.** If any monthly aggregate or any cumulative-balance point in the 6-month window exceeds **€100M** (or the equivalent in the active currency), the affected card replaces its bar/line chart with a textual fallback: a short caption (*"Valores fora de escala. Verifique a sua lista de lançamentos." / "Values are off the chart. Please double-check your transactions."*) followed by the per-month numbers in a list. The Despesas/Receitas donut and the Maiores variações list are **not** affected — they format with `formatMoney` and remain readable at any value. This is a defensive guard against pre-existing outlier rows; the input cap in §3.1 prevents new entries from triggering it.
 
 **Refresh behaviour**: the screen **refetches on every focus**. So adding a transaction in another tab and returning to Insights should immediately reflect the new data — no manual refresh control exists.
 
 > **Tester note.** Insights is heavily dependent on the same computation rules as Home (§6). If a number on Insights disagrees with what you can recompute from the Ledger, that's a high-value bug — please file with the exact values you saw and the source rows.
+>
+> If the Mensal or Saldo acumulado card shows the textual "Valores fora de escala" fallback unexpectedly (i.e. without an obviously-large transaction in your data), that's also worth reporting — please include the per-month figures shown.
 
 ### 5.4 Map — geo-tagged transactions for the displayed month
 
@@ -425,6 +431,7 @@ A **modal map screen** opened from the **map icon in the Ledger header**. Shows 
 - **Sub-routes**: Contas / Accounts, Categorias / Categories.
 - **Segurança / Security card**: Biometric lock toggle — see §4.12.
 - **Backup card**: Export, Restore.
+- **Sobre / About card** (bottom of the page): displays the running app version (e.g. `Versão 0.19.1`). Always include this value when you file a bug report — paste it into the *App version / build number* field on the issue template.
 
 ---
 
