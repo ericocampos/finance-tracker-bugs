@@ -10,13 +10,16 @@ If you are a QA tester, this is the right place. Welcome, and thank you for test
 
 | Field | Value |
 |---|---|
-| **Platform** | Android (APK) |
-| **App version** | `0.19.1` |
-| **Build link** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/4441ff84-64da-4377-a22c-123bded6de40 |
-| **Build ID** | `4441ff84-64da-4377-a22c-123bded6de40` |
+| **Platform** | Android (APK + OTA) |
+| **App version** | `0.19.2` (delivered via OTA on top of the 0.19.1 APK below) |
+| **Install link (one-time, APK)** | https://expo.dev/accounts/ericocampos/projects/finance-tracker-mobile/builds/4441ff84-64da-4377-a22c-123bded6de40 |
 | **Direct APK download** | https://expo.dev/artifacts/eas/9qSn9SSF92A6TCaV7To9L9.apk |
-| **OTA channel** | `preview` (matching runtime `1`). Starting with this build, the runtime version is hand-managed and decoupled from the app version. Future patch releases (0.19.2, 0.19.3, …) on the same runtime will arrive automatically as silent OTA updates — you do **not** need to reinstall the APK for those. A new APK is only required when the runtime is bumped (native module changes or Expo SDK upgrade). |
-| **What's new in this build** | **Insights freeze fix** — tapping the Insights tab no longer soft-locks the app on devices that have a transaction with an unusually large amount; affected charts now show a textual fallback instead. **Amount cap** — the new-transaction amount field is now capped at €99,999,999.99 to prevent zero-typo crashes; the input stops accepting input after 10 digits. **Settings → Sobre** — Settings now displays the running app version, so you can include it in bug reports. See `docs/app-behavior.md` §3.1, §5.3, and §5.5 for the full behavior; the **Tester note** boxes in those sections list what to verify. |
+| **APK Build ID** | `4441ff84-64da-4377-a22c-123bded6de40` (the 0.19.1 build; this is the current OTA runtime base) |
+| **OTA tag (current)** | `mobile-v0.19.2-preview1` — published 2026-05-02. The OTA arrives automatically on next foreground; **no reinstall needed** if you're already on 0.19.1+. |
+| **How to confirm you're on the latest** | Open the app → Configurações → Sobre → check the version. Should read `0.19.2`. If you still see `0.19.1` after a foreground/background cycle and a network connection, force-quit and reopen. |
+| **OTA channel** | `preview`, matching `runtimeVersion: "1"` (hand-managed, decoupled from app version). Future patch releases (0.19.3, 0.19.4, …) on the same runtime arrive as silent OTAs — no APK reinstall. A fresh APK is only required when the runtime version itself changes (native module additions or Expo SDK upgrade). |
+| **What's new in 0.19.2 (this OTA)** | **Per-bar Insights fallback** — when only some months in the 6-month window have an unusually large value, the chart now renders the in-range months normally and only the outlier slot gets a dashed-ghost marker. Previously the entire card collapsed to a textual list. A caption row below the chart names the outlier month and shows its actual value. See `docs/app-behavior.md` §5.3 for the updated behaviour. |
+| **What's in the 0.19.1 base APK** | **Insights freeze fix** — tapping the Insights tab no longer soft-locks the app on devices that have a transaction with an unusually large amount. **Amount cap** — the new-transaction amount field is capped at €99,999,999.99 (10 digits max) to prevent zero-typo crashes. **Settings → Sobre** — displays the running app version. See `docs/app-behavior.md` §3.1 and §5.5. |
 
 **To install**: open the Build link above on your Android device, then tap "Install" on the Expo build page. You may need to allow "Install from unknown sources" the first time.
 

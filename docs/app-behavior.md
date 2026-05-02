@@ -403,13 +403,22 @@ The screen has four sections, top to bottom, each in its own card:
 - **Only the current month has data** → trend bars and cumulative line show one populated point; a small grey caption below the page reads *"Adicione mais meses para ver tendências."*
 - **One kind missing in the breakdown** → that kind's card shows the placeholder caption; the other kind renders normally.
 - **Fewer than 3 movers in either sub-section** → render whatever exists; if zero, the entire "Biggest movers" card is hidden.
-- **Out-of-scale data behaviour.** If any monthly aggregate or any cumulative-balance point in the 6-month window exceeds **€100M** (or the equivalent in the active currency), the affected card replaces its bar/line chart with a textual fallback: a short caption (*"Valores fora de escala. Verifique a sua lista de lançamentos." / "Values are off the chart. Please double-check your transactions."*) followed by the per-month numbers in a list. The Despesas/Receitas donut and the Maiores variações list are **not** affected — they format with `formatMoney` and remain readable at any value. This is a defensive guard against pre-existing outlier rows; the input cap in §3.1 prevents new entries from triggering it.
+- **Out-of-scale data behaviour (v0.19.2+).** When *some* months in the 6-month window have a value above the chart safety ceiling (**€100M** in display units, or the equivalent in the active currency) but others fall in range, the chart now renders **per-bar / per-point**:
+  - **Mensal**: the in-range months render as normal income/expense bar pairs; each outlier bar is replaced with a **dashed ghost outline** at the chart's full height with a `↑` arrow inside.
+  - **Saldo acumulado**: the in-range points render as a normal line; each outlier point is **clamped to the chart edge** (top if positive, bottom if negative) and rendered as a **hollow dashed circle**. The connecting line stays solid.
+  - Below each affected card, a **caption row** lists one line per outlier in the form *"Mai 2026 ↓ 1 299 999 999,96 € (fora de escala)"* (bar chart, with `↑` for income and `↓` for expense) or *"Mai 2026 — −1 299 998 492,62 € (fora de escala)"* (line chart). The locale tag is `(fora de escala)` (pt-PT), `(fora da escala do gráfico)` (pt-BR), or `(off the chart)` (en).
+  - The **pointer tooltip** on the cumulative-balance line shows the *real* cents for outlier points, not the clamped geometry value.
+- **Catastrophic out-of-scale (every month exceeds the ceiling).** The card falls back to the original 0.19.1 textual fallback: short caption (*"Valores fora de escala. Verifique a sua lista de lançamentos." / "Values are off the chart. Please double-check your transactions."*) followed by the per-month numbers in a list. No chart drawn.
+- The **Despesas/Receitas donut** and the **Maiores variações** list are **not** affected by either fallback — they format with `formatMoney` and remain readable at any value.
+- This is a defensive guard against pre-existing outlier rows; the per-transaction cap in §3.1 prevents new entries from triggering it.
 
 **Refresh behaviour**: the screen **refetches on every focus**. So adding a transaction in another tab and returning to Insights should immediately reflect the new data — no manual refresh control exists.
 
 > **Tester note.** Insights is heavily dependent on the same computation rules as Home (§6). If a number on Insights disagrees with what you can recompute from the Ledger, that's a high-value bug — please file with the exact values you saw and the source rows.
 >
-> If the Mensal or Saldo acumulado card shows the textual "Valores fora de escala" fallback unexpectedly (i.e. without an obviously-large transaction in your data), that's also worth reporting — please include the per-month figures shown.
+> If you see a dashed-ghost bar / hollow ghost dot or the textual fallback **without** an obviously-large transaction in your data, that's also worth reporting — please include the per-month figures shown in the caption row.
+>
+> On Android specifically: confirm the dashed border on the ghost bar renders as a proper dash pattern (not a solid rectangle and not invisible). React Native's Android dashed-border path has historical quirks; a regression there would manifest as a styling-only bug.
 
 ### 5.4 Map — geo-tagged transactions for the displayed month
 
