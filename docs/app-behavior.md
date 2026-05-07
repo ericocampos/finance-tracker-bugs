@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-04-29 (app v0.19.0).
+> **Last updated:** 2026-05-07 (app v0.19.8).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -440,7 +440,13 @@ A **modal map screen** opened from the **map icon in the Ledger header**. Shows 
 - **Sub-routes**: Contas / Accounts, Categorias / Categories.
 - **Segurança / Security card**: Biometric lock toggle — see §4.12.
 - **Backup card**: Export, Restore.
-- **Sobre / About card** (bottom of the page): displays the running app version (e.g. `Versão 0.19.1`). Always include this value when you file a bug report — paste it into the *App version / build number* field on the issue template.
+- **Sobre / About card** (bottom of the page): displays the running app version on a four-state pressable **Versão / Version** row. Always include this version value when you file a bug report — paste it into the *App version / build number* field on the issue template.
+  - **Idle** (default): row reads `Versão X.Y.Z — toque para verificar` (pt) / `Version X.Y.Z — tap to check` (en). Tap to fire a manual OTA update check.
+  - **Checking**: while the check is in flight, the row briefly reads `… a verificar…` (pt-PT) / `verificando…` (pt-BR) / `checking…` (en) and is disabled.
+  - **No update**: if no update is available, the row briefly reads `… já estás na versão mais recente` (pt-PT) / `você está na versão mais recente` (pt-BR) / `you're on the latest` (en) for ~3 s, then reverts to idle.
+  - **Update available**: if an OTA update has been fetched (manually, or by the auto-check fired on cold start and on app foreground, debounced to once every 30 minutes), the row flips to `… toque para reiniciar` / `tap to restart` and the bottom **Settings tab** shows a small accent-coloured notification dot. Tapping the row reloads the app on the new bundle. Without the prompt, OTA updates still apply automatically on the next cold launch — the prompt only short-cuts the wait.
+  - **Error**: if the check fails (offline, network error), the row briefly reads `… não foi possível verificar` / `couldn't check` for ~3 s in red, then reverts to idle and remains tappable for retry.
+  - All checks (manual or auto) arm the 30-minute debounce, so an immediately-following auto-check is suppressed. Failure is silent except for the inline label — no toast. The check is a no-op in dev / debug builds (the row briefly shows "you're on the latest" in those environments).
 
 ---
 
