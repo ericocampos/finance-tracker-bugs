@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-05-07 (app v0.19.8).
+> **Last updated:** 2026-05-08 (app v0.19.10).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -366,7 +366,7 @@ The app has **four bottom tabs**: **Início / Home**, **Lançamentos / Ledger**,
 
 ### 5.2 Ledger — browse, filter, edit
 
-- **Month navigator**: `< [Month] [Year] >` at the top. Tap the arrows to move month-by-month.
+- **Month navigator**: `< [Month] [Year] ▾ >` at the top. The `<` and `>` arrows move month-by-month. The **month name itself is tappable** (a small chevron `▾` next to it indicates that): tapping opens a **"Ir para mês / Jump to month"** modal with a year stepper at the top (`‹ YYYY ›`) and a 3×4 grid of localised short month names (Jan…Dec). Pick a month and the Ledger jumps directly to that `(year, month)`. Buttons at the bottom of the modal: **Mês atual / Current month** snaps to today, **Cancelar / Cancel** (or tapping the dim backdrop) dismisses without changing the view.
 - **Filter chips**: **Todas / All**, **Receita / Income**, **Despesa / Expense**, **Transferência / Transfer**. Multiple chips can be active at once; the active set is the filter.
 - **Day-grouped list**: a header for each day with that day's net total, then the rows for the day. Each row shows:
   - The category-color swatch.
@@ -377,11 +377,12 @@ The app has **four bottom tabs**: **Início / Home**, **Lançamentos / Ledger**,
 - Rows that have a captured location render a small **map-pin icon** next to the description (see §4.13).
 - Tap any row → edit modal.
 - **Map icon in the header** → opens the modal Map view for the displayed month (see §5.5).
+- **Floating "+" button (FAB)** in the bottom-right corner: opens the new-transaction modal directly, so the user can add another transaction without going back to Home. The FAB is **only shown when the displayed month has at least one transaction**; in the empty state, the branded empty-state CTA already covers that path, so the FAB is hidden to avoid duplicate buttons.
 
 **Empty states (two distinct cases — please don't confuse them when filing bugs):**
 
-- **The displayed month has zero transactions at all** (before any chip filter is applied) → the list renders a **branded empty state**: circle/ring artwork, the title *"Nada por aqui ainda"*, a privacy-leaning subtitle, and a primary CTA *"Novo lançamento"* that opens the new-transaction modal.
-- **The month has transactions but the active filter chips exclude all of them** → a compact text fallback *"Sem transações neste mês."* (no artwork, no CTA).
+- **The displayed month has zero transactions at all** (before any chip filter is applied) → the list renders a **branded empty state**: circle/ring artwork, the title *"Nada por aqui ainda"*, a privacy-leaning subtitle, and a primary CTA *"Novo lançamento"* that opens the new-transaction modal. The bottom-right FAB is hidden in this state.
+- **The month has transactions but the active filter chips exclude all of them** → a compact text fallback *"Sem transações neste mês."* (no artwork, no CTA). The FAB stays visible because the underlying month is non-empty.
 
 ### 5.3 Insights — analytics over the last 6 months
 
