@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-05-07 (app v0.19.8).
+> **Last updated:** 2026-05-09 (app v0.19.15).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -96,6 +96,17 @@ Stored per device, persists between launches:
 
 - **Language** — `en`, `pt-PT`, or `pt-BR`.
 - **Currency** — `EUR`, `USD`, or `BRL`.
+- **Theme** — `system`, `light`, or `dark`.
+- **Biometric lock** — on / off (see §4.12).
+- **Default account for quick-add** — only set when the user has 2 or more active accounts. Picked in Settings; used by the deep-link prefill flow (§4.15) when an incoming URL doesn't name an account. Single-account users never set this.
+
+### 2.5 Tag
+
+A user-defined free-form label that can be applied to any transaction (including transfer legs). Tags are **orthogonal** to categories: a transaction has exactly one category (the spending bucket) and zero or more tags (cross-cutting context like a trip name, a project, a reimbursement flag).
+
+- A tag has a **name** (1+ chars after trimming, must be unique case-insensitively, e.g. "viagem" and "Viagem" are the same tag).
+- Tag colour is **automatically derived from the name** — there is no manual colour picker. Renaming a tag changes its colour.
+- Tags can be **archived** (hidden from autocomplete, settings active list, breakdowns, and filter chips). Archived tags stay attached to historical transactions until unarchived. Archive is the only way to "remove" a tag — there is no hard delete.
 
 ---
 
@@ -349,6 +360,49 @@ Transactions can optionally carry a captured location (latitude, longitude, accu
 
 > **Tester note.** Coordinates leaving the device — under any circumstance — would be a critical bug. If you see network activity correlated with capturing a location, file it as a Crash/security issue immediately and stop testing.
 
+### 4.14 Tags — applying, renaming, and archiving
+
+Tags are free-form labels you can attach to any transaction in addition to its category. Use them for things a category can't express on its own — a trip, a project, a reimbursement state, a person.
+
+- **Applying tags during entry.** On the new-transaction form (and the edit form), a **Tags** field appears below Categoria. It's a chip input with type-ahead.
+  - Typing a name shows existing tags that match. Tap one to add it. Tap an applied tag to remove it.
+  - Typing a name not in the list shows a **"Criar"** option that creates the tag and applies it in a single tap.
+  - Tags are 0..N per transaction — there is no limit.
+- **Tags on transfers.** When you tag a transfer at creation time, the tags are applied to **both legs** of the pair. On edit, changing tags cascades to the paired leg, the same way amount/date/description do.
+- **Archived vs deleted.** There is no hard delete. To stop a tag from showing up in autocomplete and filters, **archive** it (Settings → Tags → tap the tag → Arquivar). Archived tags remain attached to historical transactions and reappear if you unarchive them.
+- **Insights → Por tag.** A new section in the Insights tab shows the monthly total per tag in a flat list.
+  - **Transfers are excluded** — transfers are net-zero, so they don't appear under any tag total.
+  - A transaction with **multiple tags counts in full under each** — totals can sum to more than the monthly aggregate. A footnote in the section calls this out. Example: a €100 expense tagged both "Trip" and "Reimbursable" shows up as €100 under "Trip" and €100 under "Reimbursable".
+- **Filter chips on Ledger and Map.** A row of tag chips appears for the tags used in the visible month. Single-select — tap one to filter rows / pins to only that tag, tap again to clear. Resets when you change months. Tapping an Insights "Por tag" row deep-links into the Ledger pre-filtered by that tag.
+- **Tag colour.** Each tag's chip colour is hash-derived from its name. There's no colour picker. If you rename "viagem" to "férias", the chip's colour changes. This is intentional — colour is a visual aid, not data.
+
+> **Bug-worthy.** A transfer leg with tags on one side but not the other (after a save). A tag appearing in a filter chip when it has zero transactions in the visible month. Insights "Por tag" totals that include transfers. Two tags differing only by case (e.g. "viagem" and "Viagem") existing as separate entries.
+
+### 4.15 Deep-link prefill — opening the transaction form from a URL
+
+The app responds to URLs of the form `finance-tracker://transaction/new?...` by opening the new-transaction form **pre-filled** from the query string. This is the foundation that future quick-add features (Shortcuts, share-sheet, widgets) will sit on; today the URL only **opens the form**, it never saves the transaction silently.
+
+Supported query parameters:
+
+- **`amount`** — decimal in major units. `35`, `35.50`, `35,50` (comma OK as decimal separator). Zero, negative, NaN, and Infinity are silently dropped.
+- **`category`** — case-insensitive exact match against your active category names. Unknown or archived names are silently dropped. On a successful match, the segmented control (Receita / Despesa) is also set to that category's type.
+- **`account`** — case-insensitive exact match against your active account names. If absent or unknown, the app falls back to (in order):
+  1. The single active account, if you only have one.
+  2. Your "Default account for quick-add" setting (§5.5), if it points to a still-active account.
+  3. The active account you created first (earliest creation date).
+- **`merchant`** — URL-encoded text. Trimmed; empty after trim is dropped; clipped to 200 characters.
+- **`observations`** — URL-encoded text. Trimmed; empty after trim is dropped; clipped to 2000 characters.
+- **`silent=1`** — accepted by the parser but **currently ignored**. The form always opens. Reserved for a future quick-add path.
+
+What testers should see:
+
+- The form opens pre-filled with whatever resolved cleanly. If the URL passed `amount=35&category=Mercado`, the segmented control is on Despesa, the amount field shows 35,00, the Mercado chip is selected, and the account picker is auto-set per the rules above.
+- Any **invalid or unresolved param is silently dropped** — no toast, no warning. The form just opens with the fields that did resolve.
+- **Cold start path.** If the app is killed and you fire the URL, the app boots and (assuming you've completed first-launch onboarding) the form opens with the URL params applied, with no flash of an empty form first.
+- **No "this came from a deep link" UI.** The form looks identical to a regular new-transaction modal.
+
+> **Bug-worthy.** A URL with `amount=35&category=Mercado` opening the form with a different category selected. The form briefly showing empty fields before the URL params populate. An invalid param showing an error toast (it should drop silently). A `silent=1` URL skipping the form (Phase A always opens the form). The "Default account for quick-add" picker showing in Settings when only one account is active.
+
 ---
 
 ## 5. Screens
@@ -435,9 +489,9 @@ A **modal map screen** opened from the **map icon in the Ledger header**. Shows 
 
 ### 5.5 Settings — preferences and data
 
-- **Top**: Language picker (chips), Currency picker (chips).
-- **Theme picker** (chips: System / Light / Dark) — see §4.11.
-- **Sub-routes**: Contas / Accounts, Categorias / Categories.
+- **Top**: Language picker (chips), Currency picker (chips), Theme picker (chips: System / Light / Dark) — see §4.11.
+- **Default account for quick-add** picker — visible **only when you have 2 or more active accounts**. Three or more chip options: "First created (default)" plus one chip per active account. Tapping a chip persists the choice immediately. Used by the deep-link prefill flow (§4.15) when an incoming URL doesn't name an account. Single-account users never see this block.
+- **Sub-routes**: Contas / Accounts, Categorias / Categories, Tags — see §4.14 for tag management.
 - **Segurança / Security card**: Biometric lock toggle — see §4.12.
 - **Backup card**: Export, Restore.
 - **Sobre / About card** (bottom of the page): displays the running app version on a four-state pressable **Versão / Version** row. Always include this version value when you file a bug report — paste it into the *App version / build number* field on the issue template.
