@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-05-09 (app v0.19.15).
+> **Last updated:** 2026-05-09 (app v0.19.16).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -107,6 +107,16 @@ A user-defined free-form label that can be applied to any transaction (including
 - A tag has a **name** (1+ chars after trimming, must be unique case-insensitively, e.g. "viagem" and "Viagem" are the same tag).
 - Tag colour is **automatically derived from the name** — there is no manual colour picker. Renaming a tag changes its colour.
 - Tags can be **archived** (hidden from autocomplete, settings active list, breakdowns, and filter chips). Archived tags stay attached to historical transactions until unarchived. Archive is the only way to "remove" a tag — there is no hard delete.
+
+### 2.6 Recurring pattern
+
+A pattern is something the app *detects*, not something the user *creates*. There is no form to "add a recurring item." The Insights tab automatically scans the user's expense history and surfaces monthly-recurring spending (subscriptions, fixed bills) as a list.
+
+- A pattern is identified by `(merchant, category)`. The same merchant in two different categories is two patterns. A merchant with no category is allowed.
+- Detection runs over the last 6 calendar months. A pattern needs ≥ 3 distinct months covered AND all amounts within ±20% of the group's median.
+- Each pattern has a **state**: default (counted toward the awareness total), confirmed (counted, with a checkmark), or dismissed (excluded from the total, faded with strikethrough).
+- States persist between app launches. They survive the heuristic re-running (the app does not "forget" a confirmed/dismissed pattern just because new transactions came in).
+- Income, transfers, and opening-balance rows are never patterns.
 
 ---
 
@@ -403,6 +413,48 @@ What testers should see:
 
 > **Bug-worthy.** A URL with `amount=35&category=Mercado` opening the form with a different category selected. The form briefly showing empty fields before the URL params populate. An invalid param showing an error toast (it should drop silently). A `silent=1` URL skipping the form (Phase A always opens the form). The "Default account for quick-add" picker showing in Settings when only one account is active.
 
+### 4.16 Recurring monthly spending — automatic detection
+
+The app finds patterns of monthly-recurring expenses (subscriptions, fixed bills) automatically. There is no form to "add" a recurring item; the user only confirms, dismisses, or clears each detected pattern.
+
+**Where you see it.**
+
+- **Insights tab → "Gasto fixo mensal" / "Monthly fixed spending" card** at the top of the cards stack. Shows the sum of medians across non-dismissed patterns and a count of items. Tap to open the detail screen.
+  - **No-history state**: with fewer than 3 months of qualifying expense data, the card shows the copy "Sem padrões detectados ainda. Precisa de pelo menos 3 meses de histórico." (and language equivalents). No total, no count.
+  - **All-dismissed state**: if every detected pattern has been dismissed, the card shows "Tudo dispensado · ver lista" (and language equivalents). Tap still opens the detail screen.
+- **`/recurring` detail screen** — opens only by tapping the card. Not in the bottom tab bar. Renders:
+  - Title + total + a one-line explainer ("Padrões detectados nos últimos 6 meses, cobrindo pelo menos 3 deles.").
+  - Filter chips: **Todos / Confirmados / Dispensados**, default Todos. Single-select.
+  - One row per pattern, sorted by amount descending. Each row: merchant name, optional category chip, median amount, "Visto pela última vez em YYYY-MM-DD" line.
+  - Visual states per row: confirmed (small ✓), dismissed (faded with strikethrough), default (no badge).
+  - Tap a row → action sheet (Alert) with **Confirmar / Dispensar / Limpar**. Choosing one persists the new state immediately and the screen reloads.
+
+**Detection rules (so testers can predict what should appear).**
+
+A pattern is identified by `(lower(trim(merchant)), category_id)`. A `(merchant, category)` pair becomes a pattern when ALL of:
+
+- Looking at the last 6 calendar months ending today, the pair has at least 3 *distinct* months with at least one expense in each. Multiple expenses in the same month do NOT count as multiple months.
+- All expense amounts within those 6 months are within **±20% of the group's median**. A single outlier (e.g. one €150 charge when the median is €10) disqualifies the whole pattern.
+- The transactions are expenses only. Transfers (both legs), opening-balance rows, and rows with no merchant are ignored.
+
+**Pattern states.**
+
+- **Default** (no row in the state table) — counted in the total, no badge.
+- **Confirmed** — counted in the total, small `✓` next to the merchant. Useful for "yes, this is recurring, I expect it."
+- **Dismissed** — excluded from the total, faded + strikethrough. Useful for "this isn't really recurring, stop counting it" (e.g. you happen to have shopped at the same supermarket 3 months in a row).
+- States persist in `recurring_pattern_states`. They survive app relaunches, OTA updates, and the heuristic re-running with new data.
+- "Limpar" (Clear) removes the row and returns the pattern to default.
+
+**Edge cases / by design (not bugs).**
+
+- A merchant renamed mid-window (e.g. "Netflix" → "Netflix Premium") splits into two patterns, each with its own state.
+- A subscription cancelled in the last 2 months drops off naturally as the 6-month window slides forward — the third oldest occurrence eventually leaves the window.
+- A price hike outside the ±20% band makes the pattern disappear briefly; it reappears once the new amount has 3 occurrences in the window.
+- Income and transfers are never detected.
+- Annual / quarterly cadences are NOT detected in v1 — only monthly.
+
+> **Bug-worthy.** A pattern in the list whose amount is more than ±20% from the listed median. Confirming a pattern but the total drops (it should not — confirm and default both count). Dismissing a pattern but the total stays the same (it should drop by that pattern's median). State not persisting after force-quit + reopen. A transfer leg or opening-balance row appearing in the list. The card showing a non-zero total when the no-history empty state is also shown.
+
 ---
 
 ## 5. Screens
@@ -441,8 +493,9 @@ The app has **four bottom tabs**: **Início / Home**, **Lançamentos / Ledger**,
 
 The fourth bottom tab. Shows patterns in the data the user has entered. The window is the **rolling last 6 months ending at the current calendar month** — there is **no time-range scrolling** in this version. All values aggregate across **all non-archived accounts**; there is **no per-account filter**.
 
-The screen has four sections, top to bottom, each in its own card:
+The screen has the following sections, top to bottom, each in its own card:
 
+- **Gasto fixo mensal / Monthly fixed spending** *(since 0.19.16)* — at the very top. Awareness card showing the sum of detected monthly-recurring expenses and a count of items, OR an empty-state hint if there are fewer than 3 months of qualifying history, OR an "all dismissed" hint if every detected pattern has been dismissed. Tap the card to open the dedicated detail screen — see §4.16 for detection rules and §5.6 for the screen.
 - **Mensal / Monthly** — grouped bar chart, one bar pair per month: green income, red expense. A small label above each pair shows that month's net. Opening-balance income rows are **excluded**; transfer legs are **excluded**.
 - **Saldo acumulado / Cumulative balance** — line chart, one point per end-of-month for the 6 months. Each point is the **aggregate balance of all accounts** at that cutoff, computed using the same anchor semantics that drive Home's per-account balances (most recent opening-balance row on or before the cutoff anchors that account's running total; signed transactions then accumulate).
 - **Despesas por categoria / Expenses by category** AND **Receitas por categoria / Income by category** — two donut charts (current month only) plus a legend. Each legend row shows: color swatch · category name · percent · amount, sorted **descending by amount**. Categories with zero in the current month don't appear. If a kind has no rows that month, a small grey caption (*"Sem despesas este mês." / "No expenses this month."*) replaces the chart for that section. Transfer legs and opening-balance rows are **excluded**.
@@ -501,6 +554,23 @@ A **modal map screen** opened from the **map icon in the Ledger header**. Shows 
   - **Update available**: if an OTA update has been fetched (manually, or by the auto-check fired on cold start and on app foreground, debounced to once every 30 minutes), the row flips to `… toque para reiniciar` / `tap to restart` and the bottom **Settings tab** shows a small accent-coloured notification dot. Tapping the row reloads the app on the new bundle. Without the prompt, OTA updates still apply automatically on the next cold launch — the prompt only short-cuts the wait.
   - **Error**: if the check fails (offline, network error), the row briefly reads `… não foi possível verificar` / `couldn't check` for ~3 s in red, then reverts to idle and remains tappable for retry.
   - All checks (manual or auto) arm the 30-minute debounce, so an immediately-following auto-check is suppressed. Failure is silent except for the inline label — no toast. The check is a no-op in dev / debug builds (the row briefly shows "you're on the latest" in those environments).
+
+### 5.6 Recurring detail screen — `/recurring` *(since 0.19.16)*
+
+A standalone screen reached only by tapping the "Gasto fixo mensal" card on the Insights tab (§5.3). It is **not** in the bottom tab bar.
+
+- **Header**: title ("Gasto fixo mensal" / "Monthly fixed spending"), big total (sum of medians of non-dismissed patterns), and a one-line explainer ("Padrões detectados nos últimos 6 meses, cobrindo pelo menos 3 deles." / "Patterns detected over the last 6 months, covering at least 3 of them.").
+- **Filter chips**: Todos / Confirmados / Dispensados, default Todos. Single-select.
+- **Pattern list**: one row per pattern, sorted by median amount descending. Each row: merchant name, optional category chip + name (omitted if no category), median amount on the right, "Visto pela última vez em YYYY-MM-DD" line below the amount.
+- **Visual states**:
+  - Default: no badge.
+  - Confirmed: small `✓` next to merchant name.
+  - Dismissed: row dimmed (opacity 0.5), merchant + amount text struck through.
+- **Actions**: tap a row → native action sheet with Confirmar / Dispensar / Limpar. Choosing one persists immediately; the screen reloads so the badge / opacity / total update.
+- **Empty filter result**: if a chip filter excludes everything, the area below the chips shows "Nenhum padrão para mostrar." / "No patterns to show."
+- **Close**: top-right `✕` button returns to Insights.
+
+See §4.16 for detection rules.
 
 ---
 
