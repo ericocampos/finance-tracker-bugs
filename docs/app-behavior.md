@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-05-09 (app v0.19.18).
+> **Last updated:** 2026-05-09 (app v0.19.19). This is a stability release; all existing 0.19.18 behavioral facts continue to hold.
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
