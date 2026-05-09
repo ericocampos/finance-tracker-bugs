@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-05-09 (app v0.19.17).
+> **Last updated:** 2026-05-09 (app v0.19.18).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -262,6 +262,20 @@ A full-screen prompt with:
 4. Tap **Save**.
 5. On success the modal closes and the user goes back to the screen they came from. The new transaction is immediately reflected in totals and balances.
 6. On validation failure the modal stays open, the user's values are preserved, and the relevant error is shown.
+
+#### Merchant → category suggestion *(since 0.19.18)*
+
+When adding or editing an income or expense transaction, after you fill the **Description / merchant** field and move to the next field (or leave the merchant input focused for a moment), the app checks your historical transactions of the same type. If the same merchant text has appeared before **and** that earlier transaction had a category assigned, a small suggestion chip appears below the merchant input reading **"Sugerido: <category name>"**.
+
+- **Tapping the chip** auto-fills the Category field with the suggested category.
+- **The chip never overrides** — if you've already picked a category, the chip doesn't appear.
+- **Transfer mode**: the chip is never shown in transfer mode (transfers don't have categories).
+- **Editing the merchant**: as soon as you edit the merchant text again, the chip disappears.
+- **Picking a category manually**: once you select a category yourself, the chip disappears.
+- **Switching modes**: changing the transaction type (Income ↔ Expense) dismisses the chip.
+- **Matching is case-insensitive and accent-insensitive** — "Padão" and "Padao" are treated as the same merchant for matching purposes.
+
+This is a convenience feature to speed up data entry; there is no config to turn it off.
 
 ### 4.3 Editing a transaction
 
