@@ -2,7 +2,7 @@
 
 > **For QA testers.** This is the canonical reference for *what the app is supposed to do*. If the build you're testing does not match what's described here, that's a bug — file it.
 >
-> **Last updated:** 2026-05-09 (app v0.19.16).
+> **Last updated:** 2026-05-09 (app v0.19.17).
 >
 > Maintainers update this file whenever app behavior changes. If something on screen contradicts this doc, **trust the doc** and report it.
 
@@ -117,6 +117,18 @@ A pattern is something the app *detects*, not something the user *creates*. Ther
 - Each pattern has a **state**: default (counted toward the awareness total), confirmed (counted, with a checkmark), or dismissed (excluded from the total, faded with strikethrough).
 - States persist between app launches. They survive the heuristic re-running (the app does not "forget" a confirmed/dismissed pattern just because new transactions came in).
 - Income, transfers, and opening-balance rows are never patterns.
+
+### 2.7 Snapshot
+
+A snapshot is an automatic, on-device backup of the entire database, captured as a complete copy of the SQLite file. The user does not create snapshots manually — the app takes them in the background.
+
+- **Storage:** snapshots are kept inside the app's private storage on the device only. Nothing is uploaded.
+- **Two types:**
+  - **Auto** — taken when the app comes to the foreground, capped at one every 24 hours.
+  - **Pre-restore** — taken automatically just before any restore (from a previous snapshot or from an external backup file), so the user can always undo the restore.
+- **Retention** (auto only): the most recent **7 daily** snapshots, plus **12 monthly anchors** (the oldest auto snapshot of each prior month). Anything older is pruned.
+- **Pre-restore snapshots are never auto-deleted.** They only go away if the user taps "Wipe all" on the Snapshots screen.
+- **Restore is always undoable.** Whenever the user restores from a snapshot or from an external file, the app first takes a pre-restore snapshot of the current state, then performs the restore. To roll back, the user opens the Snapshots screen and restores the pre-restore snapshot.
 
 ---
 
@@ -315,15 +327,17 @@ Existing user data (account names, category names, transaction descriptions, obs
 
 1. A destructive **confirmation alert** appears: *"Esta ação substitui todas as transações, contas e categorias atuais. Continuar?"* — Cancel / Restore. Tapping outside should **not** confirm.
 2. On Restore, a **file picker** opens, scoped to SQLite database files.
-3. After the user picks a file, the app replaces the local database with the contents of the picked file and shows a full-screen message: *"Backup restaurado / Backup restored — force-quit and reopen"*. The bottom tabs become unreachable.
+3. After the user picks a file, the app first **takes a pre-restore snapshot** of the current state automatically (so the restore is always undoable, see §4.17), then replaces the local database with the contents of the picked file and shows a full-screen message: *"Backup restaurado / Backup restored — force-quit and reopen"*. The bottom tabs become unreachable.
 4. The user **must force-quit the app and reopen it.**
 5. On the next cold start the app boots normally with the restored data.
+6. If the user wanted to roll back the restore, they open **Settings → Backup → Snapshots** and restore the pre-restore snapshot listed at the top of the list (§5.7).
 
 Edge cases worth probing:
 
 - **Restoring an older backup.** Should work — any internal upgrades apply on the next boot.
 - **Restoring a file that isn't a real database.** The OS file picker filters by file type; if a tester somehow selects a non-database file (a renamed `.db`, etc.), the app should fail gracefully on next boot rather than corrupting silently.
 - **Killing the app between confirming the restore and seeing the force-quit message.** On next launch the user should see the restored data with no error.
+- **Pre-restore snapshot exists after restore.** After any successful restore, opening Snapshots should show a fresh "Pre-restore" entry at the top of the list, dated to the moment of the restore.
 
 ### 4.11 Theme — light, dark, follow the system
 
@@ -455,6 +469,66 @@ A pattern is identified by `(lower(trim(merchant)), category_id)`. A `(merchant,
 
 > **Bug-worthy.** A pattern in the list whose amount is more than ±20% from the listed median. Confirming a pattern but the total drops (it should not — confirm and default both count). Dismissing a pattern but the total stays the same (it should drop by that pattern's median). State not persisting after force-quit + reopen. A transfer leg or opening-balance row appearing in the list. The card showing a non-zero total when the no-history empty state is also shown.
 
+### 4.17 Snapshots — automatic on-device backup history *(since 0.19.17)*
+
+The app keeps a rolling history of database snapshots automatically, so the user can always roll back if a restore went wrong, the device was acting up after an update, or they simply want a known-good fallback.
+
+**Where you see it.**
+
+- **Settings → Backup → "Snapshots"** is a new row at the top of the Backup card. The row shows a one-line summary like *"3 snapshots · 4,2 MB"* (count + total disk size). Tapping the row opens the Snapshots screen (§5.7).
+
+**When the app takes them.**
+
+- **Auto** — every time the app comes to the foreground (cold launch or returning from background). Capped at **one snapshot per 24 hours**: if the most recent auto snapshot is < 24 h old, no new snapshot is taken.
+- **Pre-restore** — taken automatically right before any restore action, regardless of the 24 h gate. There are two restore paths and **both** trigger a pre-restore snapshot:
+  - Restoring from a previous snapshot (Snapshots screen → Restaurar).
+  - Restoring from an external backup file (Backup → Restaurar backup → file picker, §4.10).
+
+**Retention rules.**
+
+The app prunes old auto snapshots after each new one is taken so that disk usage stays bounded. The kept set is:
+
+- **All** pre-restore snapshots — **never** auto-deleted.
+- **Daily window**: every auto snapshot taken in the last 7 days.
+- **Monthly anchors**: for every prior calendar month older than 7 days, the **earliest** auto snapshot in that month is kept, up to **12 anchors total**. Anything beyond the 12 most-recent anchors is pruned.
+
+> **Tester note (retention math).** Maximum auto snapshots on disk is 7 (daily) + 12 (monthly) = **19**. Add any number of pre-restore snapshots on top. If you see more than 19 auto snapshots in the list, that's a pruning bug. If you see fewer than 7 auto snapshots after the app has been opened on 7 different days within the last week, that's also a bug.
+
+**What snapshots store.**
+
+- An exact copy of the SQLite database file at the moment of capture (via SQLite's `VACUUM INTO`). All transactions, accounts, categories, tags, recurring-pattern states, settings — everything.
+- Stored under the app's private documents directory. **Not visible** through the device's file manager outside of an unlocked dev environment, and **not** uploaded anywhere.
+
+**Restore flow from a snapshot.**
+
+1. Open Settings → Backup → Snapshots.
+2. Tap a row in the list.
+3. A destructive **confirmation alert** appears: *"Esta ação substitui todas as transações, contas e categorias atuais por esta snapshot. Continuar?"* — Cancel / Restore. Tapping outside should **not** confirm.
+4. On Restore, the app first **takes a pre-restore snapshot** of the current state (so this restore is itself undoable), then replaces the local database with the snapshot's contents and shows the same full-screen *"Backup restaurado / force-quit and reopen"* message as the external-file restore (§4.10).
+5. Force-quit and reopen.
+
+**Wipe all.**
+
+- The Snapshots screen has a **"Apagar todas / Wipe all"** action that deletes **every** snapshot, including pre-restore. A confirmation alert is required. After wiping, the next foreground will create a fresh auto snapshot.
+
+**What testers should see.**
+
+- Cold-start the app for the first time after this OTA: a snapshot appears in the list within a couple of seconds (the first foreground triggers the first auto snapshot).
+- Background and foreground the app within 24 h of an existing auto snapshot: the count does **not** increase.
+- Background and foreground 24 h+ later: a new auto snapshot is taken (the count goes up by one until pruning kicks in).
+- Restore from any path (snapshot or external file): a fresh **Pre-restore** entry appears at the top of the list dated to the moment of restore.
+- Wipe all: the list becomes empty. After the next foreground, a single fresh Auto entry appears.
+
+> **Bug-worthy.**
+> - More than 19 auto snapshots in the list (pruning broken).
+> - A pre-restore snapshot disappearing without the user tapping Wipe all (pre-restore is supposed to be protected from auto-deletion).
+> - The summary "X snapshots · Y MB" not matching the count and total size shown on the screen below.
+> - A second auto snapshot appearing within 24 h of an earlier one (the gate should prevent this).
+> - Restoring from a snapshot **without** a fresh pre-restore being added to the list afterward.
+> - The Snapshots row in Settings showing "0 snapshots" while the screen below lists items.
+> - The app crashing or hanging on Wipe all when the list is large.
+> - Restoring an old snapshot but seeing data from the current state after force-quit + reopen.
+
 ---
 
 ## 5. Screens
@@ -571,6 +645,24 @@ A standalone screen reached only by tapping the "Gasto fixo mensal" card on the 
 - **Close**: top-right `✕` button returns to Insights.
 
 See §4.16 for detection rules.
+
+### 5.7 Snapshots screen — `Settings → Backup → Snapshots` *(since 0.19.17)*
+
+A sub-screen reached from the Backup card on Settings. Lists every snapshot currently on the device.
+
+- **Header**: title ("Snapshots") with a top-right `✕` close button. A summary line below the title reads *"X snapshots · Y MB"* (count + total disk usage).
+- **List**: one row per snapshot, sorted **most-recent first**. Each row is tappable and shows:
+  - **Type label**: *"Auto"* or *"Pré-restauração / Pre-restore"*.
+  - **Relative timestamp**: *"hoje, 14:32"* / *"today, 14:32"*, *"ontem, 09:15"* / *"yesterday, 09:15"*, *"há 3 dias, 11:00"* / *"3 days ago, 11:00"*, falling back to a full date for older entries.
+  - **Size**: e.g. *"1,4 MB"*.
+- **Tap a row** → confirmation alert *"Esta ação substitui todas as transações, contas e categorias atuais por esta snapshot. Continuar?"* / *"This will replace all current data with this snapshot. Continue?"* with Cancel / Restore. Tapping outside should **not** confirm.
+- **On Restore**: the app first takes a fresh pre-restore snapshot of the current state, then replaces the database, then shows the same full-screen *"Backup restaurado / force-quit and reopen"* gate as the external-file restore (§4.10). Force-quit + reopen completes the restore.
+- **"Apagar todas / Wipe all"** action at the bottom of the screen: a destructive button. Tapping shows a confirmation alert *"Apagar todas as snapshots? Esta ação é irreversível."* / *"Delete all snapshots? This cannot be undone."* with Cancel / Apagar tudo. On confirm, every snapshot — including pre-restore — is deleted; the list goes empty and the summary reads *"0 snapshots · 0 KB"*.
+- **Empty state**: if there are no snapshots (e.g. immediately after Wipe all, before the next foreground), the list area shows *"Nenhuma snapshot ainda. A primeira é criada automaticamente quando o app voltar ao primeiro plano."* / *"No snapshots yet. The first one is created automatically when the app returns to the foreground."*
+
+> **Tester note.** The Snapshots row on Settings → Backup recomputes its summary every time you return to the Settings tab, so you should never see the row stale relative to what's actually on the screen below. If you see a mismatch, that's bug-worthy.
+
+See §4.17 for retention rules and the auto / pre-restore distinction.
 
 ---
 
